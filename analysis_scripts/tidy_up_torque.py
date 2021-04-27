@@ -60,7 +60,7 @@ for isim in range(2):
                     dy = interpolate.interp1d(x, y)(dt)
                     val += dy
                 elif irun==0: # interpolate data to make timing consistent
-                    big_dt = time[-1]-time[-2]
+                    big_dt = time[-2]-time[-3]
                     interp_t = np.arange(0, time[-1], big_dt)
                     if len(val.shape)==2:
                         y = val[:,2]
@@ -69,6 +69,7 @@ for isim in range(2):
                     val = interpolate.interp1d(time,y)(interp_t)
                     time = interp_t
                 time/=t_orbit
+                print(time)
                 x = time
                 if len(val.shape)==2:
                     y = val[:,2]

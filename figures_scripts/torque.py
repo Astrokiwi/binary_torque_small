@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 f = h5py.File("../analysis_out/tidy_torque.hdf5",'r')
-fig,sp = plt.subplots(2,2,figsize=(9,6),sharex=True,sharey='row',constrained_layout=True)
+fig,sp = plt.subplots(2,2,figsize=(9,6),sharex=True,sharey=False,constrained_layout=True)
 
 plot_prams = {
     "acc": {
@@ -25,7 +25,7 @@ for isim in range(2):
             for iy,(plot_key,ax_pram) in enumerate(plot_prams.items()):
                 ax = sp[iy,isim]
                 h5_key = f"BH_{plot_key}_J_{bh}_{irun}_{isim}"
-                y = np.array(f[h5_key])
+                y = -np.array(f[h5_key]) # minus sign so that angular momentum of binary is positive
                 ax.plot(time,y)
 
 for isp,ax_pram in enumerate(plot_prams.values()):
@@ -33,6 +33,9 @@ for isp,ax_pram in enumerate(plot_prams.values()):
 
 for ix in range(2):
     sp[-1,ix].set_xlabel('t (orbits)')
+
+sp[0,0].set_title("ecc")
+sp[0,1].set_title("circ")
 
 fig.savefig("../figures_out/torque.pdf")
 plt.close(fig)

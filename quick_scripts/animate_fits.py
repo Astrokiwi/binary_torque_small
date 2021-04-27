@@ -6,7 +6,8 @@ from astropy.io import fits
 import numpy as np
 import os
 
-simulations = ["restest"]
+simulations = [""
+               ""]
 # simulations = ["binary","unary"]
 # imagers = ["K","L","12"]
 # imagers = ["K","bands"]
