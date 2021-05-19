@@ -54,12 +54,12 @@ def find_breakpoint(f,x,y,n=100):
     return prams,best_pcov
 
 
-f=h5py.File("/srv/djw1g16/paper_devel/binary_torque_small/analysis_out/tidy_torque.hdf5",'r')
+f=h5py.File("../analysis_out/tidy_torque.hdf5",'r')
 
 run_labels = ["ecc","circ"]
 set_labels = ["norad","rad","rad_earlier"]
 
-fout = h5py.File("/srv/djw1g16/paper_devel/binary_torque_small/analysis_out/power.hdf5",'w')
+fout = h5py.File("../analysis_out/power.hdf5",'w')
 
 for irun in range(2) :
     for iset in range(3) :
@@ -70,6 +70,12 @@ for irun in range(2) :
                 # cut last one, where dt is not consistent
                 t = t[:-1]
                 y = y[:-1]
+
+                # for nograv, only consider eqm
+                if iset==0:
+                    t_eqm = (t>=20.)
+                    y=y[t_eqm]
+                    t=t[t_eqm]
 
                 dydt = np.gradient(y, t)
 
