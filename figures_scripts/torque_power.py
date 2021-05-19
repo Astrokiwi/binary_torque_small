@@ -13,13 +13,6 @@ import sys
 # def constant_to_powerlaw(x,a,b,c):
 #     return a/(1+b*x**(-c))
 
-def split_powerlaw(x,a,m,m2,xc=0.1):
-    return np.piecewise(
-        x,
-        [x<xc, x>=xc],
-        [ lambda x: a*(x/xc)**m2, lambda x: a*(x/xc)**m]
-        )
-
 def split_poly(x,a,m,m2,xc=0.1):
     return np.piecewise(
         x,
@@ -27,118 +20,91 @@ def split_poly(x,a,m,m2,xc=0.1):
         [ lambda x: a+(x-xc)*m2, lambda x: a+(x-xc)*m]
         )
 
+def format_with_uncertainty(x,e,precision=2):
+    round_factor = -np.floor(np.log10(e)).astype(np.int) + precision-1
+    x_round = np.round(x,round_factor)
+    e_round = np.round(e,round_factor)
 
-def constant_to_powerlaw(x,a,m,xc=0.1):
-    return np.piecewise(
-        x,
-        [x<xc, x>=xc],
-        [ lambda x: a, lambda x: a*(x/xc)**m]
-        )
-    # y1 = (a*x**0)[x<xc]
-    # y2 = (a*(x/xc)**c)[x>=xc]
-    # y = np.concatenate((y1,y2))
-    # return y
-    # return a/(1+b*x**(-c))
+    if round_factor<0:
+        strout = fr"{{{x_round:.0f}}} \pm {{{e_round:.0f}}}"
+    else:
+        strout_0 = fr"{{0:.{round_factor:0d}f}} \pm {{1:.{round_factor:0d}f}}"
+        strout = strout_0.format(x_round,e_round)
 
-def constant_to_straight(x,a,m,xc=0.1):
-    return np.piecewise(
-        x,
-        [x<xc, x>=xc],
-        [ lambda x: a, lambda x: a-m*(x-xc)]
-        )
-    # y1 = (a*x**0)[x<xc]
-    # y2 = (a-m*(x-xc))[x>=xc]
-    # y = np.concatenate((y1,y2))
-    # return y
+    strout = r"$"+strout+r"$"
+    return strout
 
-def constant(x,a):
-    return a*np.ones(x.shape)
+f=h5py.File("/srv/djw1g16/paper_devel/binary_torque_small/analysis_out/power.hdf5",'r')
 
-def powerlaw(x,m):
-    return a*np.ones(x.shape)
+run_labels = ["ecc","circ"]
+set_labels = ["norad","rad","rad_earlier"]
 
+nx = 2
+ny = 6
+fig, sp = plt.subplots(ny+1, nx, constrained_layout=True, figsize=(nx*3, ny*2.), dpi=200,sharex=True, gridspec_kw={"height_ratios":[1,1,1,0.2,1,1,1]})
 
-def find_breakpoint(f,x,y,n=100):
-    prams = None
-    best_fit = 1.e20
-    best_pcov = None
-    # xc_range = np.logspace(np.log10(x[0]),np.log10(x[-1]),n)
-    xc_range = np.linspace(x[0],x[-1],n)
-    for xc in xc_range:
-        f_xc = partial(f,xc=xc)
-        popt, pcov = optimize.curve_fit(f_xc,x,y,p0=[y[0],-2,0],bounds=([-np.inf,-5,-5],[np.inf,1,1]))
-        perr = np.sum(np.abs(y - f_xc(x, *popt)))
-        if perr<best_fit:
-            prams = np.append(popt,xc)
-            best_fit = perr
-            best_pcov = pcov
-    return prams,best_pcov
+y_plots = [0,1,2,4,5,6]
 
-
-f=h5py.File("/srv/djw1g16/paper_devel/binary_torque_small/analysis_out/tidy_torque.hdf5",'r')
-
-fig, sp = plt.subplots(3, 4, constrained_layout=True, figsize=(12, 6), dpi=200,sharex=True)
 for irun in range(2) :
     for iset in range(3) :
-        for ibh in range(2) :
-            for ikey,key in enumerate(["acc","grav"]):
-                y = np.array(f[f"BH_{key}_J_{ibh + 1}_{iset}_{irun}"])
-                t = np.array(f[f"time_{iset}_{irun}"])
-                # cut last one, where dt is not consistent
-                t = t[:-1]
-                y = y[:-1]
+        for ikey,key in enumerate(["acc","grav"]):
+            # ax = sp[iset, irun + 2 * ikey]
+            ax = sp[ikey*3+iset, irun]
+            ax.set_title(f"{run_labels[irun]}_{set_labels[iset]}_{key}")
 
-                dydt = np.gradient(y, t)
+colour_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-                dt = t[-1] - t[-2]
+for irun in range(2) :
+    for iset in range(3) :
+        for ikey,key in enumerate(["acc","grav"]):
+            y_mins = []
+            y_maxes = []
 
-                paua = np.abs(np.fft.fft(dydt)) ** 2
-                freqs = np.fft.fftfreq(dydt.size, dt)
-                idx = np.argsort(freqs)
-                x = freqs[idx]
+            iy = ikey * 4 + iset
+            ix = irun
+            ax = sp[iy, ix]
 
-                ax = sp[iset, irun + 2*ikey]
-                pos_slice = (x>0)
-                pos_paua = paua[idx][pos_slice]
-                x = x[pos_slice]
+            for ibh in range(2) :
+                iy = ikey * 3 + iset
 
-                ax.loglog(x, pos_paua)
+                pos_paua = f[f"power_{ix}_{iy}_{ibh}"]
+                x = f[f"freq_{ix}_{iy}_{ibh}"]
+                popt = f[f"popt_{ix}_{iy}_{ibh}"]
+                perr = f[f"perr_{ix}_{iy}_{ibh}"]
+
+                ax.loglog(x, pos_paua, c=colour_cycle[iset+ibh*3])
 
                 logx = np.log10(x)
                 logy = np.log10(pos_paua)
-                # popt,pcov = optimize.curve_fit(constant_to_straight,logx,logy)
-                # print(popt)
-                # ax.loglog(10**logx,10**constant_to_straight(logx,*popt))
 
-                # popt,pcov = optimize.curve_fit(constant_to_powerlaw,x,pos_paua,p0=[pos_paua[0],0.1,-2])
-                # try:
-                popt,pcov = find_breakpoint(split_poly,logx,logy)
-                perr = np.sqrt(np.diag(pcov))
-                # print(pcov,perr)
-                # print(popt)
-                # print(pcov)
-                # ax.loglog(x,split_powerlaw(x,*popt))
                 label_txt = rf"$\alpha={popt[2]:.1f}\pm{perr[2]:.1f},{popt[1]:.1f}\pm{perr[1]:.1f}$"
-                # print(label_txt)
-                ax.loglog(10**logx,10**split_poly(logx,*popt),ls='--',lw=1,zorder=2.1,label=label_txt)
-                # except RuntimeError as e:
-                #     print(str(e))
-                #     print("Runtime Error - carrying on")
-                # ax.set_ylim(pos_paua[0]*0.9,pos_paua[-1]*1.1)
-                # if ibh==0:
-                #     ax.loglog(x,x**-1)
-                #     ax.loglog(x,x**-2)
-                #     ax.loglog(x,np.ones(x.size)*pos_paua[0])
+                label_txt = format_with_uncertainty(popt[2],perr[2])+","+format_with_uncertainty(popt[1],perr[1])
+                # ax.loglog(10**logx,10**split_poly(logx,*popt),ls='--',lw=1,zorder=2.1,label=label_txt,c=colour_cycle[7+ibh])
+                ax.loglog(10**logx,10**split_poly(logx,*popt),label=label_txt,c=colour_cycle[7+ibh])
 
-for ix in range(4):
-    for iy in range(3):
+                y_mins.append(np.min(pos_paua))
+                y_maxes.append(np.max(pos_paua))
+
+            y0 = np.min(y_mins)
+            y1 = np.max(y_maxes)
+            dy = y1/y0
+            ax.set_ylim(y1/(dy**1.4),y0*(dy**1.1))
+
+for ix in range(nx) :
+    sp[3,ix].remove()
+    for iy in y_plots :
         ax = sp[iy,ix]
-        ax.set_xticks([0.01,0.05,0.1,0.5,1.,5.,10.])
-        ax.legend(fontsize='xx-small')
+        ticks = np.array([0.01,0.05,0.1,0.5,1.,5.,10.])
+        # labels = 1./ticks
+        ax.set_xticks(ticks)
+        # ax.set_xticklabels(["100","20","10","2","1","0.2","0.1"])
 
-for ix in range(4):
-    sp[-1,ix].set_xlabel(r'$\omega$ ($1/T$)')
-for iy in range(3):
+        ax.legend(fontsize='small')
+
+for ix in range(nx):
+    sp[-1,ix].set_xlabel(r'$f$ ($1/T$)')
+    # sp[-1,ix].set_xlabel(r'Period ($T$)')
+for iy in y_plots:
     sp[iy,0].set_ylabel(r'$P$')
 fig.savefig("../figures_out/powerspectra.pdf")
 
