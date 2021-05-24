@@ -34,14 +34,17 @@ def format_with_uncertainty(x,e,precision=2):
     strout = r"$"+strout+r"$"
     return strout
 
-f=h5py.File("/srv/djw1g16/paper_devel/binary_torque_small/analysis_out/power.hdf5",'r')
+f=h5py.File("../analysis_out/power.hdf5",'r')
 
 run_labels = ["ecc","circ"]
 set_labels = ["norad","rad","rad_earlier"]
 
 nx = 2
 ny = 6
-fig, sp = plt.subplots(ny+1, nx, constrained_layout=True, figsize=(nx*3, ny*2.), dpi=200,sharex=True, gridspec_kw={"height_ratios":[1,1,1,0.2,1,1,1]})
+scale = 1.5
+fig, sp = plt.subplots(ny+1, nx, constrained_layout=True, figsize=(nx*3*scale, ny*2.*scale), dpi=200,sharex='col', gridspec_kw={"height_ratios":[1,1,1,0.2,1,1,1]})
+
+fig_torque, sp_torque = plt.subplots(ny+1, nx, constrained_layout=True, figsize=(nx*3.*scale, ny*2.*scale), dpi=200,gridspec_kw={"height_ratios":[1,1,1,0.2,1,1,1]})
 
 y_plots = [0,1,2,4,5,6]
 
@@ -49,8 +52,12 @@ for irun in range(2) :
     for iset in range(3) :
         for ikey,key in enumerate(["acc","grav"]):
             # ax = sp[iset, irun + 2 * ikey]
-            ax = sp[ikey*3+iset, irun]
-            ax.set_title(f"{run_labels[irun]}_{set_labels[iset]}_{key}")
+            iy = ikey * 4 + iset
+            ax_pow = sp[iy, irun]
+            ax_abs = sp_torque[iy, irun]
+
+            ax_pow.set_title(f"{run_labels[irun]}_{set_labels[iset]}_{key}")
+            ax_abs.set_title(f"{run_labels[irun]}_{set_labels[iset]}_{key}")
 
 colour_cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
@@ -60,9 +67,14 @@ for irun in range(2) :
             y_mins = []
             y_maxes = []
 
+            # ty_lows = []
+            # ty_highs = []
+
             iy = ikey * 4 + iset
             ix = irun
-            ax = sp[iy, ix]
+            ax_pow = sp[iy, ix]
+
+            ax_abs = sp_torque[iy, ix]
 
             for ibh in range(2) :
                 iy = ikey * 3 + iset
@@ -71,8 +83,10 @@ for irun in range(2) :
                 x = f[f"freq_{ix}_{iy}_{ibh}"]
                 popt = f[f"popt_{ix}_{iy}_{ibh}"]
                 perr = f[f"perr_{ix}_{iy}_{ibh}"]
+                torque = f[f"tau_{ix}_{iy}_{ibh}"]
+                time = np.array(f[f"t_{ix}_{iy}_{ibh}"])
 
-                ax.loglog(x, pos_paua, c=colour_cycle[iset+ibh*3])
+                ax_pow.loglog(x, pos_paua, c=colour_cycle[iset+ibh*3])
 
                 logx = np.log10(x)
                 logy = np.log10(pos_paua)
@@ -80,18 +94,40 @@ for irun in range(2) :
                 label_txt = rf"$\alpha={popt[2]:.1f}\pm{perr[2]:.1f},{popt[1]:.1f}\pm{perr[1]:.1f}$"
                 label_txt = format_with_uncertainty(popt[2],perr[2])+","+format_with_uncertainty(popt[1],perr[1])
                 # ax.loglog(10**logx,10**split_poly(logx,*popt),ls='--',lw=1,zorder=2.1,label=label_txt,c=colour_cycle[7+ibh])
-                ax.loglog(10**logx,10**split_poly(logx,*popt),label=label_txt,c=colour_cycle[7+ibh])
+                ax_pow.loglog(10**logx,10**split_poly(logx,*popt),label=label_txt,c=colour_cycle[7+ibh])
 
                 y_mins.append(np.min(pos_paua))
                 y_maxes.append(np.max(pos_paua))
 
+                ax_abs.plot(time-time[0],torque, c=colour_cycle[iset+ibh*3])
+                # if iset==0:
+                #     ty_lows.append(np.min(torque[(time>20.)]))
+                #     ty_highs.append(np.max(torque[(time>20.)]))
+
             y0 = np.min(y_mins)
             y1 = np.max(y_maxes)
             dy = y1/y0
-            ax.set_ylim(y1/(dy**1.4),y0*(dy**1.1))
+            ax_pow.set_ylim(y1/(dy**1.4),y0*(dy**1.1))
+
+            if iset == 0 and ikey==0:
+                if irun==0:
+                    ax_abs.set_yscale('symlog',linthresh=1e-5)
+                elif irun==1:
+                    ax_abs.set_yscale('symlog', linthresh=1e-5)
+                # y0 = np.min(ty_lows)
+                # y1 = np.max(ty_highs)
+                # y_range = np.max([np.abs(y0),np.abs(y1)])
+                # y_range = 10**np.ceil(np.log10(y_range))
+                # print(y_range)
+                # ax_abs.set_yscale('symlog',linthresh=y_range)
+                # dy = y1-y0
+                # ax_abs.set_ylim(y1-(dy*1.4),y0+(dy*1.1))
 
 for ix in range(nx) :
     sp[3,ix].remove()
+    sp_torque[3,ix].remove()
+
+for ix in range(nx) :
     for iy in y_plots :
         ax = sp[iy,ix]
         ticks = np.array([0.01,0.05,0.1,0.5,1.,5.,10.])
@@ -103,9 +139,12 @@ for ix in range(nx) :
 
 for ix in range(nx):
     sp[-1,ix].set_xlabel(r'$f$ ($1/T$)')
+    sp_torque[-1,ix].set_xlabel(r'$t$ ($T$)')
     # sp[-1,ix].set_xlabel(r'Period ($T$)')
 for iy in y_plots:
     sp[iy,0].set_ylabel(r'$P$')
+    sp_torque[iy, 0].set_ylabel(r'$\tau$')
 fig.savefig("../figures_out/powerspectra.pdf")
+fig_torque.savefig("../figures_out/torque_time.pdf")
 
 f.close()

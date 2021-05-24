@@ -71,13 +71,20 @@ for irun in range(2) :
                 t = t[:-1]
                 y = y[:-1]
 
-                # for nograv, only consider eqm
+
+                dydt = np.gradient(y, t)
+
+                iy = ikey * 3 + iset
+                ix = irun
+
+                fout[f"t_{ix}_{iy}_{ibh}"] = t
+                fout[f"tau_{ix}_{iy}_{ibh}"] = dydt
+
+                # for nograv, only consider eqm for power spectrum
                 if iset==0:
                     t_eqm = (t>=20.)
                     y=y[t_eqm]
                     t=t[t_eqm]
-
-                dydt = np.gradient(y, t)
 
                 dt = t[-1] - t[-2]
 
@@ -97,8 +104,6 @@ for irun in range(2) :
                 popt,pcov = find_breakpoint(split_poly,logx,logy)
                 perr = np.sqrt(np.diag(pcov))
 
-                iy = ikey * 3 + iset
-                ix = irun
 
                 fout[f"power_{ix}_{iy}_{ibh}"] = pos_paua
                 fout[f"freq_{ix}_{iy}_{ibh}"] = x
