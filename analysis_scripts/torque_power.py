@@ -5,6 +5,10 @@ import h5py
 from scipy import optimize
 from functools import partial
 
+def exp_drop(x,a,b):
+    return a*np.exp(-b*x)#+1.e-10
+
+
 def split_powerlaw(x,a,m,m2,xc=0.1):
     return np.piecewise(
         x,
@@ -81,11 +85,19 @@ for irun in range(2) :
                 fout[f"tau_{ix}_{iy}_{ibh}"] = dydt
 
                 # for nograv, only consider eqm for power spectrum
+                # also, detrend data using power law
                 if iset==0:
                     t_eqm = (t>=20.)
-                    y=y[t_eqm]
+                    dydt=dydt[t_eqm]
                     t=t[t_eqm]
 
+                    torque_fit = np.abs(dydt)
+                    popt, pcov = optimize.curve_fit(exp_drop,t,torque_fit)
+
+                    dydt/=exp_drop(t,*popt)
+
+
+                # dydt = np.gradient(y, t)
                 dt = t[-1] - t[-2]
 
                 paua = np.abs(np.fft.fft(dydt)) ** 2

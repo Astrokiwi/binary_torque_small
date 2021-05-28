@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 print("Loading")
 header,snap = gizmo_tools.load_gizmo_nbody("rad_prod","rad_small_circ_earlier","050",load_binary_headers=True,load_vals=["bh_pos"])
-cent = snap[pynbody.filt.Sphere("0.2 pc")]
+cent = snap[pynbody.filt.Sphere("0.1 pc")]
 
 fin = h5py.File("../analysis_out/tau_test.hdf5",'r')
 d = np.array(fin["tau_sim"])

@@ -104,8 +104,8 @@ if __name__ == '__main__':
             box_corner = [-widths[0]*.45/major_axis,-widths[0]*.45/major_axis]
             box_dims = [widths[0]*.9/major_axis,widths[0]*.9/major_axis]
             for iy in range(len(t_image)):
-                gizmo_tools.box_connected_two_axes(sp[iy, 0], sp[iy, 1], box_corner, box_dims,color=box_color)
-                gizmo_tools.box_connected_two_axes(sp[iy, 2], sp[iy, 3], box_corner, box_dims,color=box_color)
+                gizmo_tools.box_connected_two_axes(sp[iy, 0], sp[iy, 1], box_corner, box_dims,color=box_color,corners=[[1,0],[1,1]])
+                gizmo_tools.box_connected_two_axes(sp[iy, 2], sp[iy, 3], box_corner, box_dims,color=box_color,corners=[[1,0],[1,1]])
 
             fig.suptitle(tidy_name)
             print("Saving")

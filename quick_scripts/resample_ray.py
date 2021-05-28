@@ -18,7 +18,7 @@ if rank == 0 :
     print("Loading")
     header, snap = gizmo_tools.load_gizmo_nbody("rad_prod", "rad_small_circ_earlier", "050", load_binary_headers=True,
                                                 load_vals=["bh_pos"])
-    cent = snap#[pynbody.filt.Sphere("0.2 pc")]
+    cent = snap#[pynbody.filt.Sphere("0.1 pc")]
     print(len(cent))
     # plane = cent[pynbody.filt.Disc("0.1 pc","0.001 pc")]
     r = np.array(cent["pos"])
@@ -36,7 +36,7 @@ r_agn = comm.bcast(r_agn, root=0)
 if rank == 0 :
     print("Raytracing")
 
-d = ray_py.calc_depths(r,smooth,opac,r_agn=r_agn)
+d = ray_py.calc_depths(r,smooth,opac,r_agn=r_agn,mass=1.e-14)
 
 if rank == 0 :
     print("Dumping",len(d))
